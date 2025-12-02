@@ -1,213 +1,175 @@
-# CLAUDE.md - AI Assistant Guide for gameserver-pilot
+# CLAUDE.md - gameserver-pilot
 
-This document provides comprehensive guidance for AI assistants working with the gameserver-pilot repository.
+リアルタイムマルチプレイヤーゲーム向けのスケーラブルなゲームサーバーフレームワーク
 
-## Project Overview
+## 技術スタック
 
-**gameserver-pilot** is a game server project currently in its initial development phase. This repository serves as the foundation for building scalable, real-time game server infrastructure.
+- **言語**: Python 3.14+
+- **パッケージマネージャー**: uv
+- **データバリデーション**: pydantic, pydantic-settings
+- **HTTP通信**: httpx
+- **設定ファイル**: PyYAML
+- **テスト**: pytest, pytest-cov, pytest-asyncio
+- **コード品質**: ruff (フォーマット/リント), mypy (型チェック)
 
-## Repository Status
-
-This is a newly initialized repository. The codebase structure and conventions documented below represent the intended architecture and should be updated as the project evolves.
-
-## Codebase Structure (Planned)
+## プロジェクト構成
 
 ```
 gameserver-pilot/
-├── src/                    # Source code
-│   ├── server/             # Server-side game logic
-│   ├── networking/         # Network protocols and handlers
-│   ├── game/               # Game state and mechanics
-│   ├── utils/              # Utility functions
-│   └── config/             # Configuration management
-├── tests/                  # Test suites
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── load/               # Load/stress tests
-├── docs/                   # Documentation
-├── scripts/                # Build and deployment scripts
-├── config/                 # Configuration files
-└── docker/                 # Container definitions
+├── gameserver_pilot/           # メインパッケージ
+│   ├── __init__.py             # パッケージ初期化、エントリーポイント
+│   ├── server.py               # GameServerクラス
+│   ├── config.py               # ServerConfig (pydantic-settings)
+│   ├── models/                 # データモデル
+│   │   ├── player.py           # Playerモデル
+│   │   └── game_state.py       # GameStateモデル
+│   ├── networking/             # ネットワーク処理
+│   │   └── connection.py       # Connectionクラス
+│   ├── game/                   # ゲームロジック
+│   │   └── loop.py             # GameLoopクラス
+│   └── utils/                  # ユーティリティ
+│       └── id_generator.py     # ID生成関数
+├── tests/                      # テストスイート
+│   ├── test_server.py          # サーバーテスト
+│   ├── models/                 # モデルテスト
+│   ├── networking/             # ネットワークテスト
+│   └── game/                   # ゲームロジックテスト
+├── docs/                       # ドキュメント
+├── config/                     # 設定ファイル
+└── cache/                      # キャッシュディレクトリ
 ```
 
-## Development Workflow
-
-### Getting Started
-
-1. Clone the repository
-2. Install dependencies (once package management is set up)
-3. Configure environment variables
-4. Run the development server
-
-### Branch Naming Conventions
-
-- `main` - Production-ready code
-- `develop` - Integration branch for features
-- `feature/*` - New features
-- `fix/*` - Bug fixes
-- `claude/*` - AI-assisted development branches
-
-### Commit Message Format
-
-Use clear, descriptive commit messages:
-```
-<type>: <short description>
-
-[optional body with more details]
-```
-
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
-
-## Key Conventions
-
-### Code Style
-
-- Use consistent formatting (configure linter/formatter once tech stack is chosen)
-- Write self-documenting code with clear variable and function names
-- Add comments only where logic isn't self-evident
-- Keep functions focused and concise
-
-### Architecture Principles
-
-1. **Modularity**: Keep components loosely coupled
-2. **Scalability**: Design for horizontal scaling from the start
-3. **Real-time Performance**: Optimize for low latency
-4. **State Management**: Clear separation of game state and network state
-5. **Security**: Validate all client inputs, never trust the client
-
-### Game Server Specifics
-
-- **Tick Rate**: Define consistent server tick rate for game loop
-- **State Synchronization**: Implement efficient delta compression
-- **Connection Handling**: Graceful handling of disconnects/reconnects
-- **Matchmaking**: Consider lobby and matchmaking patterns
-- **Persistence**: Plan for game state persistence where needed
-
-## Testing Strategy
-
-### Test Categories
-
-1. **Unit Tests**: Test individual functions and components
-2. **Integration Tests**: Test component interactions
-3. **Load Tests**: Verify performance under concurrent connections
-4. **Network Tests**: Simulate various network conditions
-
-### Running Tests
+## 開発コマンド
 
 ```bash
-# Commands will be updated once test framework is configured
-# npm test / cargo test / go test / etc.
+# 依存関係のインストール
+uv sync --group dev
+
+# サーバー起動
+uv run gameserver-pilot
+
+# テスト実行
+uv run pytest
+
+# カバレッジ付きテスト
+uv run pytest --cov=gameserver_pilot --cov-report=html
+
+# フォーマット
+uv run ruff format .
+
+# リント
+uv run ruff check .
+
+# リント自動修正
+uv run ruff check --fix .
+
+# 型チェック
+uv run mypy gameserver_pilot
 ```
 
-## AI Assistant Guidelines
+## コード規約
 
-### When Working on This Repository
+### ruff設定 (pyproject.toml)
 
-1. **Read before modifying**: Always read existing code before making changes
-2. **Maintain consistency**: Follow established patterns and conventions
-3. **Keep it simple**: Avoid over-engineering; solve the current problem
-4. **Security-first**: Be vigilant about input validation and security
-5. **Performance-aware**: Game servers are latency-sensitive
+- 行長: 100文字
+- 有効ルール: E, W, F (エラー/警告), UP (pyupgrade), B (bugbear), I (isort), PLR (pylint refactor)
+- 複雑度上限: 10
+- 関数引数上限: 8
+- 分岐上限: 15
+- 文数上限: 50
 
-### Common Tasks
+### mypy設定
 
-- **Adding a new feature**: Create in appropriate `src/` subdirectory
-- **Fixing bugs**: Include test case that reproduces the issue
-- **Refactoring**: Ensure tests pass before and after changes
-- **Documentation**: Update relevant docs when changing behavior
+- pydanticプラグイン有効
+- strictモードを目指す
 
-### What to Avoid
+### テスト規約
 
-- Don't add unnecessary dependencies
-- Don't introduce breaking changes without discussion
-- Don't commit sensitive data (API keys, credentials)
-- Don't ignore error handling
-- Don't skip input validation for network messages
+- テストファイルは `test_*.py` 形式
+- テスト関数は `test_*` 形式
+- モデルテストは `tests/models/` に配置
+- ネットワークテストは `tests/networking/` に配置
+- ゲームロジックテストは `tests/game/` に配置
 
-## Environment Configuration
+## 主要クラス
 
-### Environment Variables (Planned)
+### GameServer (`gameserver_pilot/server.py`)
 
+メインサーバークラス。接続管理とゲーム状態を統括。
+
+```python
+from gameserver_pilot import GameServer
+from gameserver_pilot.config import ServerConfig
+
+config = ServerConfig(port=9000, max_players=50)
+server = GameServer(config=config)
+server.run()
 ```
-SERVER_PORT=8080          # Main server port
-TICK_RATE=60              # Server tick rate (Hz)
-MAX_PLAYERS=100           # Maximum concurrent players
-LOG_LEVEL=info            # Logging verbosity
-```
 
-## Dependencies
+### ServerConfig (`gameserver_pilot/config.py`)
 
-*To be populated once technology stack is chosen*
+サーバー設定。環境変数から読み込み可能（プレフィックス: `GAMESERVER_`）
 
-Common considerations for game servers:
-- Networking library (WebSocket, TCP/UDP handling)
-- Serialization (MessagePack, Protocol Buffers, etc.)
-- Logging framework
-- Metrics/monitoring
-- Database driver (if persistence needed)
+- `host`: バインドアドレス (default: "0.0.0.0")
+- `port`: ポート番号 (default: 8080)
+- `tick_rate`: Tick/秒 (default: 60)
+- `max_players`: 最大プレイヤー数 (default: 100)
+- `log_level`: ログレベル (default: "info")
 
-## Deployment
+### Player (`gameserver_pilot/models/player.py`)
 
-### Local Development
+プレイヤーモデル。pydantic BaseModel。
+
+- `id`: ユニークID (必須)
+- `name`: 表示名 (必須)
+- `x`, `y`: 座標 (default: 0.0)
+- `score`: スコア (default: 0)
+- `connected`: 接続状態 (default: True)
+
+### GameState (`gameserver_pilot/models/game_state.py`)
+
+ゲーム状態モデル。プレイヤー管理メソッドを持つ。
+
+- `add_player(player)`: プレイヤー追加
+- `remove_player(player_id)`: プレイヤー削除
+- `get_player(player_id)`: プレイヤー取得
+
+### GameLoop (`gameserver_pilot/game/loop.py`)
+
+固定Tickレートのゲームループ。コールバック登録可能。
+
+## 環境変数
 
 ```bash
-# Setup commands will be added once project structure is established
+GAMESERVER_HOST=0.0.0.0
+GAMESERVER_PORT=8080
+GAMESERVER_TICK_RATE=60
+GAMESERVER_MAX_PLAYERS=100
+GAMESERVER_LOG_LEVEL=info
 ```
 
-### Production Deployment
+## AI向けガイドライン
 
-*Deployment procedures to be documented as infrastructure is set up*
+### 実装時の注意点
 
-Considerations:
-- Container orchestration (Kubernetes, Docker Swarm)
-- Load balancing
-- Health checks
-- Graceful shutdown
-- Scaling policies
+1. **pydanticモデルを使用**: データ構造はpydantic BaseModelで定義
+2. **型アノテーション必須**: すべての関数に型アノテーションを付ける
+3. **テスト必須**: 新機能には対応するテストを追加
+4. **httpxを使用**: HTTP通信はhttpxを使用（タイムアウト10秒を推奨）
 
-## Monitoring and Observability
+### コードスタイル
 
-### Metrics to Track
+- インポートはisortでソート（ruffが自動処理）
+- docstringは簡潔に（複雑なロジックのみ詳細に）
+- 1関数1責務を心がける
 
-- Active connections
-- Messages per second
-- Tick processing time
-- Memory usage
-- Network bandwidth
-- Error rates
+### 避けるべきこと
 
-### Logging Standards
-
-- Use structured logging (JSON format)
-- Include correlation IDs for request tracing
-- Log at appropriate levels (debug, info, warn, error)
-
-## Contributing
-
-1. Create a feature branch from `develop`
-2. Make changes following the conventions above
-3. Ensure all tests pass
-4. Submit a pull request with clear description
-5. Address review feedback
-
-## Maintenance Notes
-
-### Updating This Document
-
-Update CLAUDE.md when:
-- Adding new directories or major components
-- Changing development workflows
-- Adding new conventions or patterns
-- Updating dependencies or tooling
-- Changing deployment procedures
+- グローバル状態の使用
+- 同期的なブロッキングI/O（非同期を優先）
+- クライアント入力の無検証での使用
+- 過度な抽象化
 
 ---
 
 *Last updated: 2025-12-02*
-*Repository status: Initial setup phase*
