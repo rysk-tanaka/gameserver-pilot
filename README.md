@@ -78,7 +78,7 @@ gameserver-pilot/
 
 ### 前提条件
 
-- Python 3.12以上
+- Python 3.14以上
 - AWS アカウント（EC2操作権限）
 - Discord Bot Token
 

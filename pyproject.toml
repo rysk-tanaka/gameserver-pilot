@@ -3,7 +3,7 @@ name = "gameserver-pilot"
 version = "0.1.0"
 description = "Discord bot for managing game servers on AWS EC2 with auto-stop on player absence"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "discord.py>=2.4.0",
     "boto3>=1.35.0",

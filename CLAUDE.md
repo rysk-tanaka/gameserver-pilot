@@ -4,7 +4,7 @@
 
 ## 技術スタック
 
-- **言語**: Python 3.12+
+- **言語**: Python 3.14+
 - **パッケージマネージャー**: uv
 - **Discord Bot**: discord.py
 - **AWS操作**: boto3
