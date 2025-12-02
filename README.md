@@ -1,65 +1,131 @@
 # gameserver-pilot
 
-リアルタイムマルチプレイヤーゲーム向けのスケーラブルなゲームサーバーフレームワーク
+ゲームサーバーをDiscordから操作し、プレイヤー不在時に自動停止するシステムです。
 
 ## 概要
 
-gameserver-pilotは、リアルタイムマルチプレイヤーゲームのためのサーバーサイドフレームワークです。低レイテンシ通信、状態同期、マッチメイキングなどの機能を提供します。
+このプロジェクトは、AWS EC2上のゲームサーバーをDiscordのスラッシュコマンドで起動・停止し、プレイヤーがいない状態が一定時間続くと自動的にサーバーを停止してコストを最適化します。
 
-## 特徴
+ゲームごとにプレイヤー数取得の実装を追加することで、様々なゲームサーバーに対応できます。
 
-- **高性能**: 非同期I/Oによる効率的な接続処理
-- **スケーラブル**: 水平スケーリングに対応した設計
-- **柔軟性**: プラグイン可能なアーキテクチャ
-- **型安全**: Pydanticによるデータバリデーション
+## 主な機能
 
-## 必要条件
+- Discordスラッシュコマンドによるサーバー操作
+  - `/start <server>` - サーバー起動
+  - `/stop <server>` - サーバー停止
+  - `/status <server>` - 状態確認
 
-- Python 3.14+
-- [uv](https://docs.astral.sh/uv/) パッケージマネージャー
+- プレイヤー数に基づく自動停止
+  - 0人の状態が1時間継続で自動停止
+  - ゲームごとのプレイヤー監視プラグイン
 
-## インストール
+- AWS EC2連携
+  - boto3によるインスタンス操作
+  - 停止時はストレージのみ課金
+
+## 対応ゲーム
+
+| ゲーム | プレイヤー数取得方式 | 状態 |
+|--------|---------------------|------|
+| Terraria (TShock) | REST API | 予定 |
+| Terraria (Vanilla) | ログファイル監視 | 予定 |
+| Core Keeper | ログファイル監視 | 予定 |
+
+## アーキテクチャ
+
+```
+┌─────────────────────────────────────────────────┐
+│  Discord Bot (Railway)                          │
+│  - スラッシュコマンド受付                          │
+│  - boto3でEC2操作                               │
+│  - 自動停止ロジック                              │
+└─────────────────┬───────────────────────────────┘
+                  │ AWS API
+                  ▼
+┌─────────────────────────────────────────────────┐
+│  AWS EC2 (東京リージョン)                        │
+│                                                 │
+│  ┌─────────────┐  ┌─────────────┐              │
+│  │ Terraria    │  │ Core Keeper │  ...         │
+│  │ t3.small    │  │ t3.medium   │              │
+│  └─────────────┘  └─────────────┘              │
+└─────────────────────────────────────────────────┘
+```
+
+## プロジェクト構造
+
+```text
+gameserver-pilot/
+├── gameserver_pilot/
+│   ├── __init__.py
+│   ├── bot.py                 # Discord Bot メイン
+│   ├── cloud/                 # クラウドプロバイダー
+│   │   ├── __init__.py
+│   │   ├── base.py           # 抽象クラス
+│   │   ├── ec2.py            # AWS EC2実装
+│   │   └── mock.py           # 開発用モック
+│   └── monitors/              # プレイヤー監視
+│       ├── __init__.py
+│       ├── base.py           # 抽象クラス
+│       ├── tshock.py         # TShock REST API
+│       └── logfile.py        # ログファイル監視
+├── tests/
+├── pyproject.toml
+└── README.md
+```
+
+## セットアップ
+
+### 前提条件
+
+- Python 3.12以上
+- AWS アカウント（EC2操作権限）
+- Discord Bot Token
+
+### インストール
 
 ```bash
-# リポジトリのクローン
 git clone https://github.com/rysk-tanaka/gameserver-pilot.git
 cd gameserver-pilot
-
-# 依存関係のインストール
 uv sync
 ```
 
-## 開発環境のセットアップ
+### 環境変数
 
 ```bash
-# 開発用依存関係を含めてインストール
-uv sync --group dev
+# Discord
+DISCORD_TOKEN="your-bot-token"
 
-# pre-commitフックの設定
-uv run pre-commit install
+# AWS
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+AWS_DEFAULT_REGION="ap-northeast-1"
+
+# 開発時はモックを使用
+ENV="development"  # or "production"
 ```
 
-## 使用方法
+## 使い方
+
+### ローカル実行
 
 ```bash
-# サーバーの起動
-uv run gameserver-pilot
+# 開発モード（モックEC2）
+ENV=development uv run python -m gameserver_pilot.bot
 
-# または
-uv run python -m gameserver_pilot
+# 本番モード
+ENV=production uv run python -m gameserver_pilot.bot
 ```
 
-## テスト
+### Discordコマンド
 
-```bash
-# テストの実行
-uv run pytest
-
-# カバレッジレポート付きで実行
-uv run pytest --cov=gameserver_pilot --cov-report=html
+```
+/start terraria     # Terrariaサーバーを起動
+/stop terraria      # Terrariaサーバーを停止
+/status terraria    # 状態を確認
 ```
 
-## コード品質
+## 開発
 
 ```bash
 # フォーマット
@@ -68,31 +134,6 @@ uv run ruff format .
 # リント
 uv run ruff check .
 
-# 型チェック
-uv run mypy gameserver_pilot
+# テスト
+uv run pytest
 ```
-
-## プロジェクト構成
-
-```
-gameserver-pilot/
-├── gameserver_pilot/       # メインパッケージ
-│   ├── models/             # データモデル
-│   ├── networking/         # ネットワーク処理
-│   ├── game/               # ゲームロジック
-│   └── utils/              # ユーティリティ
-├── tests/                  # テストスイート
-├── docs/                   # ドキュメント
-└── config/                 # 設定ファイル
-```
-
-## ライセンス
-
-MIT License
-
-## 貢献
-
-1. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-2. 変更をコミット (`git commit -m 'feat: Add amazing feature'`)
-3. ブランチをプッシュ (`git push origin feature/amazing-feature`)
-4. プルリクエストを作成

@@ -1,14 +1,15 @@
 # CLAUDE.md - gameserver-pilot
 
-リアルタイムマルチプレイヤーゲーム向けのスケーラブルなゲームサーバーフレームワーク
+ゲームサーバーをDiscordから操作し、プレイヤー不在時に自動停止するシステム
 
 ## 技術スタック
 
-- **言語**: Python 3.14+
+- **言語**: Python 3.12+
 - **パッケージマネージャー**: uv
-- **データバリデーション**: pydantic, pydantic-settings
+- **Discord Bot**: discord.py
+- **AWS操作**: boto3
 - **HTTP通信**: httpx
-- **設定ファイル**: PyYAML
+- **データバリデーション**: pydantic, pydantic-settings
 - **テスト**: pytest, pytest-cov, pytest-asyncio
 - **コード品質**: ruff (フォーマット/リント), mypy (型チェック)
 
@@ -16,27 +17,29 @@
 
 ```
 gameserver-pilot/
-├── gameserver_pilot/           # メインパッケージ
-│   ├── __init__.py             # パッケージ初期化、エントリーポイント
-│   ├── server.py               # GameServerクラス
-│   ├── config.py               # ServerConfig (pydantic-settings)
-│   ├── models/                 # データモデル
-│   │   ├── player.py           # Playerモデル
-│   │   └── game_state.py       # GameStateモデル
-│   ├── networking/             # ネットワーク処理
-│   │   └── connection.py       # Connectionクラス
-│   ├── game/                   # ゲームロジック
-│   │   └── loop.py             # GameLoopクラス
-│   └── utils/                  # ユーティリティ
-│       └── id_generator.py     # ID生成関数
-├── tests/                      # テストスイート
-│   ├── test_server.py          # サーバーテスト
-│   ├── models/                 # モデルテスト
-│   ├── networking/             # ネットワークテスト
-│   └── game/                   # ゲームロジックテスト
-├── docs/                       # ドキュメント
-├── config/                     # 設定ファイル
-└── cache/                      # キャッシュディレクトリ
+├── gameserver_pilot/
+│   ├── __init__.py
+│   ├── bot.py                 # Discord Bot メイン
+│   ├── config.py              # 設定 (pydantic-settings)
+│   ├── cloud/                 # クラウドプロバイダー
+│   │   ├── __init__.py
+│   │   ├── base.py           # 抽象クラス CloudProvider
+│   │   ├── ec2.py            # AWS EC2実装
+│   │   └── mock.py           # 開発用モック
+│   └── monitors/              # プレイヤー監視
+│       ├── __init__.py
+│       ├── base.py           # 抽象クラス PlayerMonitor
+│       ├── tshock.py         # TShock REST API監視
+│       └── logfile.py        # ログファイル監視
+├── tests/
+│   ├── test_bot.py
+│   ├── cloud/
+│   │   └── test_ec2.py
+│   └── monitors/
+│       ├── test_tshock.py
+│       └── test_logfile.py
+├── pyproject.toml
+└── README.md
 ```
 
 ## 開発コマンド
@@ -45,8 +48,11 @@ gameserver-pilot/
 # 依存関係のインストール
 uv sync --group dev
 
-# サーバー起動
-uv run gameserver-pilot
+# Bot起動（開発モード）
+ENV=development uv run python -m gameserver_pilot.bot
+
+# Bot起動（本番モード）
+ENV=production uv run python -m gameserver_pilot.bot
 
 # テスト実行
 uv run pytest
@@ -60,9 +66,6 @@ uv run ruff format .
 # リント
 uv run ruff check .
 
-# リント自動修正
-uv run ruff check --fix .
-
 # 型チェック
 uv run mypy gameserver_pilot
 ```
@@ -72,103 +75,129 @@ uv run mypy gameserver_pilot
 ### ruff設定 (pyproject.toml)
 
 - 行長: 100文字
-- 有効ルール: E, W, F (エラー/警告), UP (pyupgrade), B (bugbear), I (isort), PLR (pylint refactor)
+- 有効ルール: E, W, F, UP, B, I, PLR
 - 複雑度上限: 10
 - 関数引数上限: 8
-- 分岐上限: 15
-- 文数上限: 50
-
-### mypy設定
-
-- pydanticプラグイン有効
-- strictモードを目指す
 
 ### テスト規約
 
 - テストファイルは `test_*.py` 形式
-- テスト関数は `test_*` 形式
-- モデルテストは `tests/models/` に配置
-- ネットワークテストは `tests/networking/` に配置
-- ゲームロジックテストは `tests/game/` に配置
+- cloud テストは `tests/cloud/` に配置
+- monitors テストは `tests/monitors/` に配置
+- モックを使用してAWS APIをテスト
 
 ## 主要クラス
 
-### GameServer (`gameserver_pilot/server.py`)
+### CloudProvider (`gameserver_pilot/cloud/base.py`)
 
-メインサーバークラス。接続管理とゲーム状態を統括。
+クラウドプロバイダーの抽象基底クラス。
 
 ```python
-from gameserver_pilot import GameServer
-from gameserver_pilot.config import ServerConfig
+from abc import ABC, abstractmethod
 
-config = ServerConfig(port=9000, max_players=50)
-server = GameServer(config=config)
-server.run()
+class CloudProvider(ABC):
+    @abstractmethod
+    async def start_server(self, server_id: str) -> bool: ...
+
+    @abstractmethod
+    async def stop_server(self, server_id: str) -> bool: ...
+
+    @abstractmethod
+    async def get_server_status(self, server_id: str) -> str: ...
 ```
 
-### ServerConfig (`gameserver_pilot/config.py`)
+### EC2Provider (`gameserver_pilot/cloud/ec2.py`)
 
-サーバー設定。環境変数から読み込み可能（プレフィックス: `GAMESERVER_`）
+AWS EC2の実装。boto3を使用。
 
-- `host`: バインドアドレス (default: "0.0.0.0")
-- `port`: ポート番号 (default: 8080)
-- `tick_rate`: Tick/秒 (default: 60)
-- `max_players`: 最大プレイヤー数 (default: 100)
-- `log_level`: ログレベル (default: "info")
+### MockProvider (`gameserver_pilot/cloud/mock.py`)
 
-### Player (`gameserver_pilot/models/player.py`)
+開発・テスト用のモック実装。
 
-プレイヤーモデル。pydantic BaseModel。
+### PlayerMonitor (`gameserver_pilot/monitors/base.py`)
 
-- `id`: ユニークID (必須)
-- `name`: 表示名 (必須)
-- `x`, `y`: 座標 (default: 0.0)
-- `score`: スコア (default: 0)
-- `connected`: 接続状態 (default: True)
+プレイヤー監視の抽象基底クラス。
 
-### GameState (`gameserver_pilot/models/game_state.py`)
+```python
+from abc import ABC, abstractmethod
 
-ゲーム状態モデル。プレイヤー管理メソッドを持つ。
+class PlayerMonitor(ABC):
+    @abstractmethod
+    async def get_player_count(self) -> int: ...
+```
 
-- `add_player(player)`: プレイヤー追加
-- `remove_player(player_id)`: プレイヤー削除
-- `get_player(player_id)`: プレイヤー取得
+### TShockMonitor (`gameserver_pilot/monitors/tshock.py`)
 
-### GameLoop (`gameserver_pilot/game/loop.py`)
+TShock REST APIを使用したプレイヤー数取得。
 
-固定Tickレートのゲームループ。コールバック登録可能。
+### LogFileMonitor (`gameserver_pilot/monitors/logfile.py`)
+
+ログファイルを監視してプレイヤー数を取得。
 
 ## 環境変数
 
 ```bash
-GAMESERVER_HOST=0.0.0.0
-GAMESERVER_PORT=8080
-GAMESERVER_TICK_RATE=60
-GAMESERVER_MAX_PLAYERS=100
-GAMESERVER_LOG_LEVEL=info
+# Discord
+DISCORD_TOKEN="your-bot-token"
+
+# AWS
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+AWS_DEFAULT_REGION="ap-northeast-1"
+
+# 動作モード
+ENV="development"  # or "production"
+
+# 自動停止設定
+AUTO_STOP_MINUTES=60  # プレイヤー0人での自動停止までの時間
 ```
+
+## Discordスラッシュコマンド
+
+| コマンド | 説明 |
+|---------|------|
+| `/start <server>` | サーバーを起動 |
+| `/stop <server>` | サーバーを停止 |
+| `/status <server>` | サーバー状態を確認 |
+
+## 対応ゲーム
+
+| ゲーム | Monitor クラス | 取得方式 |
+|--------|---------------|---------|
+| Terraria (TShock) | TShockMonitor | REST API |
+| Terraria (Vanilla) | LogFileMonitor | ログファイル監視 |
+| Core Keeper | LogFileMonitor | ログファイル監視 |
 
 ## AI向けガイドライン
 
 ### 実装時の注意点
 
-1. **pydanticモデルを使用**: データ構造はpydantic BaseModelで定義
-2. **型アノテーション必須**: すべての関数に型アノテーションを付ける
-3. **テスト必須**: 新機能には対応するテストを追加
-4. **httpxを使用**: HTTP通信はhttpxを使用（タイムアウト10秒を推奨）
+1. **抽象クラスを継承**: CloudProviderとPlayerMonitorを継承して実装
+2. **非同期を使用**: すべてのI/O操作はasync/awaitを使用
+3. **pydanticモデルを使用**: データ構造はpydantic BaseModelで定義
+4. **型アノテーション必須**: すべての関数に型アノテーションを付ける
+5. **テスト必須**: 新機能には対応するテストを追加
+6. **httpxを使用**: HTTP通信はhttpxを使用（タイムアウト10秒を推奨）
 
-### コードスタイル
+### 新しいゲームの追加方法
 
-- インポートはisortでソート（ruffが自動処理）
-- docstringは簡潔に（複雑なロジックのみ詳細に）
-- 1関数1責務を心がける
+1. `monitors/` に新しいMonitorクラスを作成
+2. `PlayerMonitor` を継承し `get_player_count()` を実装
+3. 対応するテストを `tests/monitors/` に追加
+4. README.mdの対応ゲーム表を更新
+
+### 新しいクラウドプロバイダーの追加方法
+
+1. `cloud/` に新しいProviderクラスを作成
+2. `CloudProvider` を継承し各メソッドを実装
+3. 対応するテストを `tests/cloud/` に追加
 
 ### 避けるべきこと
 
 - グローバル状態の使用
-- 同期的なブロッキングI/O（非同期を優先）
-- クライアント入力の無検証での使用
-- 過度な抽象化
+- 同期的なブロッキングI/O
+- AWS認証情報のハードコード
+- 入力の無検証での使用
 
 ---
 
