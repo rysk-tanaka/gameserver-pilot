@@ -15,7 +15,7 @@ provider "aws" {
   default_tags {
     tags = {
       Project     = "gameserver-pilot"
-      Environment = "dev"
+      Environment = var.environment
       ManagedBy   = "terraform"
     }
   }

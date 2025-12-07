@@ -1,4 +1,5 @@
 # Uncomment after creating the S3 bucket and DynamoDB table for state management
+# Note: region must match var.aws_region (backend config cannot use variables)
 #
 # terraform {
 #   backend "s3" {
