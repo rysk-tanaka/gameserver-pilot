@@ -9,6 +9,8 @@ from gameserver_pilot.monitoring.beszel_client import BeszelClient
 
 logger = logging.getLogger(__name__)
 
+REPORT_INTERVAL_HOURS = 24
+
 
 class MonitoringReporter:
     """Sends periodic server monitoring reports to Discord."""
@@ -30,7 +32,7 @@ class MonitoringReporter:
         self.beszel = beszel
         self.channel_id = channel_id
 
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=REPORT_INTERVAL_HOURS)
     async def daily_report(self) -> None:
         """Send daily server status report."""
         channel = self.bot.get_channel(self.channel_id)
