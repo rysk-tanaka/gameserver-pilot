@@ -33,21 +33,25 @@
 
 ## プロジェクト構造
 
-```text
-gameserver_pilot/
-├── __init__.py
+```tree
+gameserver_pilot/          # アプリケーションコード
 ├── bot.py                 # Discord Bot メイン
 ├── config.py              # 設定（pydantic-settings）
 ├── cloud/                 # クラウドプロバイダー
-│   ├── __init__.py
 │   ├── base.py           # 抽象クラス CloudProvider
 │   ├── ec2.py            # AWS EC2実装
 │   └── mock.py           # 開発用モック
 └── monitors/              # プレイヤー監視
-    ├── __init__.py
     ├── base.py           # 抽象クラス PlayerMonitor
     ├── tshock.py         # TShock REST API監視
     └── logfile.py        # ログファイル監視
+
+infra/                     # インフラストラクチャ
+└── terraform/
+    ├── environments/
+    │   ├── dev/          # 開発環境
+    │   └── prod/         # 本番環境
+    └── modules/          # 再利用可能モジュール
 ```
 
 ## ドキュメント
@@ -56,6 +60,7 @@ gameserver_pilot/
 
 - [アーキテクチャ](./docs/architecture.md) - システム構成
 - [Beszel監視設計](./docs/beszel-monitoring.md) - リソース監視の設計
+- [Terraformインフラ](./infra/terraform/README.md) - AWS インフラ構成
 
 ## セットアップ
 

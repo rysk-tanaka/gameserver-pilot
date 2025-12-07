@@ -31,3 +31,12 @@ logs/
 *.log
 game_state/
 sessions/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfvars
+!*.tfvars.example

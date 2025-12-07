@@ -1,0 +1,4 @@
+# Copy this file to terraform.tfvars and fill in the values
+# terraform.tfvars is ignored by git
+
+aws_region = "ap-northeast-1"

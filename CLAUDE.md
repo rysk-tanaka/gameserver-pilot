@@ -68,8 +68,18 @@ Monitoring (`monitoring/`)
 ruff設定 (pyproject.toml)
 
 - 行長: 100文字
-- 有効ルール: E, W, F, UP, B, I, PLR
+- 有効ルール: E, W, F, UP, B, I, C90, PLR
 - 複雑度上限: 10
+
+pytest設定
+
+- `asyncio_mode = "auto"` により async テストは自動検出
+- デフォルトでカバレッジレポート出力
+
+テスト用モックライブラリ
+
+- moto: AWS（EC2等）のモック
+- respx: httpxのモック
 
 テスト配置
 
@@ -97,3 +107,29 @@ ruff設定 (pyproject.toml)
 - HTTP通信はhttpxを使用（タイムアウト10秒推奨）
 - データ構造はpydantic BaseModelで定義
 - すべての関数に型アノテーションを付ける
+
+## インフラストラクチャ
+
+Terraformによるインフラ管理（`infra/terraform/`）
+
+```bash
+cd infra/terraform/environments/dev  # or prod
+terraform init
+terraform plan
+terraform apply
+```
+
+環境分離
+
+- `environments/dev/`: 開発環境
+- `environments/prod/`: 本番環境
+- `modules/`: 再利用可能モジュール
+
+コード品質
+
+```bash
+terraform fmt -recursive
+terraform validate
+```
+
+詳細は `infra/terraform/README.md` を参照。
