@@ -233,6 +233,7 @@ class BeszelClient:
             f"{self.hub_url}/api/collections/users/auth-with-password",
             json={"identity": self.email, "password": self.password}
         ) as resp:
+            resp.raise_for_status()
             data = await resp.json()
             self._token = data["token"]
             return self._token
