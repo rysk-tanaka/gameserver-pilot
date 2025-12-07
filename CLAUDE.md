@@ -29,6 +29,7 @@ uv run pytest --cov=gameserver_pilot              # カバレッジ付き
 uv run ruff format .
 uv run ruff check .
 uv run mypy gameserver_pilot
+pyright gameserver_pilot tests
 ```
 
 ## アーキテクチャ
@@ -49,6 +50,12 @@ PlayerMonitor (`monitors/base.py`)
 - 実装: TShockMonitor（REST API）、LogFileMonitor（ログ監視）
 - メソッド: `get_player_count()`
 
+Monitoring (`monitoring/`)
+
+- Beszel Hub との連携によるリソース監視
+- BeszelClient: REST API クライアント
+- MonitoringReporter: 定期レポート送信（discord.ext.tasks）
+
 ### 環境による切り替え
 
 `ENV`環境変数でCloudProviderの実装を切り替える。
@@ -68,6 +75,7 @@ ruff設定 (pyproject.toml)
 
 - `tests/cloud/`: CloudProvider実装のテスト
 - `tests/monitors/`: PlayerMonitor実装のテスト
+- `tests/monitoring/`: Beszel連携のテスト
 
 ## 実装ガイドライン
 
