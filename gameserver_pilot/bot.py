@@ -8,6 +8,7 @@ from gameserver_pilot.cloud.base import CloudProvider
 from gameserver_pilot.cloud.ec2 import EC2Provider
 from gameserver_pilot.cloud.mock import MockProvider
 from gameserver_pilot.config import settings
+from gameserver_pilot.monitoring import BeszelClient, MonitoringReporter
 
 
 class GameServerBot(commands.Bot):
@@ -28,6 +29,20 @@ class GameServerBot(commands.Bot):
         # Server ID mapping (server name -> instance ID)
         self.servers: dict[str, str] = {}
 
+        # Monitoring reporter (optional)
+        self.reporter: MonitoringReporter | None = None
+        if settings.beszel_configured:
+            beszel = BeszelClient(
+                hub_url=settings.beszel_hub_url,  # type: ignore[arg-type]
+                email=settings.beszel_email,  # type: ignore[arg-type]
+                password=settings.beszel_password,  # type: ignore[arg-type]
+            )
+            self.reporter = MonitoringReporter(
+                bot=self,
+                beszel=beszel,
+                channel_id=settings.beszel_report_channel_id,  # type: ignore[arg-type]
+            )
+
     async def setup_hook(self) -> None:
         """Set up the bot before connecting."""
         self.tree.add_command(start_command)
@@ -39,6 +54,11 @@ class GameServerBot(commands.Bot):
         """Handle bot ready event."""
         print(f"Logged in as {self.user}")
         print(f"Mode: {'production' if settings.is_production else 'development'}")
+
+        # Start monitoring reporter if configured
+        if self.reporter:
+            self.reporter.start()
+            print("Monitoring reporter started")
 
 
 bot = GameServerBot()
