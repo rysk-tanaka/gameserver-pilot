@@ -31,48 +31,31 @@
 | Terraria (Vanilla) | ログファイル監視 | 予定 |
 | Core Keeper | ログファイル監視 | 予定 |
 
-## アーキテクチャ
-
-```
-┌─────────────────────────────────────────────────┐
-│  Discord Bot (Railway)                          │
-│  - スラッシュコマンド受付                          │
-│  - boto3でEC2操作                               │
-│  - 自動停止ロジック                              │
-└─────────────────┬───────────────────────────────┘
-                  │ AWS API
-                  ▼
-┌─────────────────────────────────────────────────┐
-│  AWS EC2 (東京リージョン)                        │
-│                                                 │
-│  ┌─────────────┐  ┌─────────────┐              │
-│  │ Terraria    │  │ Core Keeper │  ...         │
-│  │ t3.small    │  │ t3.medium   │              │
-│  └─────────────┘  └─────────────┘              │
-└─────────────────────────────────────────────────┘
-```
-
 ## プロジェクト構造
 
 ```text
-gameserver-pilot/
-├── gameserver_pilot/
+gameserver_pilot/
+├── __init__.py
+├── bot.py                 # Discord Bot メイン
+├── config.py              # 設定（pydantic-settings）
+├── cloud/                 # クラウドプロバイダー
 │   ├── __init__.py
-│   ├── bot.py                 # Discord Bot メイン
-│   ├── cloud/                 # クラウドプロバイダー
-│   │   ├── __init__.py
-│   │   ├── base.py           # 抽象クラス
-│   │   ├── ec2.py            # AWS EC2実装
-│   │   └── mock.py           # 開発用モック
-│   └── monitors/              # プレイヤー監視
-│       ├── __init__.py
-│       ├── base.py           # 抽象クラス
-│       ├── tshock.py         # TShock REST API
-│       └── logfile.py        # ログファイル監視
-├── tests/
-├── pyproject.toml
-└── README.md
+│   ├── base.py           # 抽象クラス CloudProvider
+│   ├── ec2.py            # AWS EC2実装
+│   └── mock.py           # 開発用モック
+└── monitors/              # プレイヤー監視
+    ├── __init__.py
+    ├── base.py           # 抽象クラス PlayerMonitor
+    ├── tshock.py         # TShock REST API監視
+    └── logfile.py        # ログファイル監視
 ```
+
+## ドキュメント
+
+詳細なドキュメントは [docs/](./docs/) を参照してください。
+
+- [アーキテクチャ](./docs/architecture.md) - システム構成
+- [Beszel監視設計](./docs/beszel-monitoring.md) - リソース監視の設計
 
 ## セットアップ
 
@@ -119,7 +102,7 @@ ENV=production uv run python -m gameserver_pilot.bot
 
 ### Discordコマンド
 
-```
+```text
 /start terraria     # Terrariaサーバーを起動
 /stop terraria      # Terrariaサーバーを停止
 /status terraria    # 状態を確認
