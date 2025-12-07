@@ -32,10 +32,13 @@ class GameServerBot(commands.Bot):
         # Monitoring reporter (optional)
         self.reporter: MonitoringReporter | None = None
         if settings.beszel_configured:
-            assert settings.beszel_hub_url is not None
-            assert settings.beszel_email is not None
-            assert settings.beszel_password is not None
-            assert settings.beszel_report_channel_id is not None
+            if not (
+                settings.beszel_hub_url
+                and settings.beszel_email
+                and settings.beszel_password
+                and settings.beszel_report_channel_id
+            ):
+                raise ValueError("Beszel configuration incomplete")
             beszel = BeszelClient(
                 hub_url=settings.beszel_hub_url,
                 email=settings.beszel_email,

@@ -45,17 +45,19 @@ class BeszelClient:
         if self._token:
             return self._token
 
-        response = await client.post(
-            f"{self.hub_url}/api/collections/users/auth-with-password",
-            json={"identity": self.email, "password": self.password},
-            timeout=10.0,
-        )
-        response.raise_for_status()
-        data = response.json()
-        token: str = data["token"]
-        self._token = token
-        self.password = ""  # Clear password after successful auth
-        return token
+        try:
+            response = await client.post(
+                f"{self.hub_url}/api/collections/users/auth-with-password",
+                json={"identity": self.email, "password": self.password},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            token: str = data["token"]
+            self._token = token
+            return token
+        finally:
+            self.password = ""  # Always clear password after auth attempt
 
     async def get_all_systems(self) -> list[ServerMetrics]:
         """Fetch metrics for all monitored systems.
