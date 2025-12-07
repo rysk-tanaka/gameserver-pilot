@@ -32,15 +32,19 @@ class GameServerBot(commands.Bot):
         # Monitoring reporter (optional)
         self.reporter: MonitoringReporter | None = None
         if settings.beszel_configured:
+            assert settings.beszel_hub_url is not None
+            assert settings.beszel_email is not None
+            assert settings.beszel_password is not None
+            assert settings.beszel_report_channel_id is not None
             beszel = BeszelClient(
-                hub_url=settings.beszel_hub_url,  # type: ignore[arg-type]
-                email=settings.beszel_email,  # type: ignore[arg-type]
-                password=settings.beszel_password,  # type: ignore[arg-type]
+                hub_url=settings.beszel_hub_url,
+                email=settings.beszel_email,
+                password=settings.beszel_password,
             )
             self.reporter = MonitoringReporter(
                 bot=self,
                 beszel=beszel,
-                channel_id=settings.beszel_report_channel_id,  # type: ignore[arg-type]
+                channel_id=settings.beszel_report_channel_id,
             )
 
     async def setup_hook(self) -> None:

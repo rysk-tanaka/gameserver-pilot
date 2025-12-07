@@ -1,12 +1,10 @@
 """Beszel API client for fetching server metrics."""
 
-from dataclasses import dataclass
-
 import httpx
+from pydantic import BaseModel
 
 
-@dataclass
-class ServerMetrics:
+class ServerMetrics(BaseModel):
     """Server metrics data from Beszel."""
 
     name: str
@@ -56,6 +54,7 @@ class BeszelClient:
         data = response.json()
         token: str = data["token"]
         self._token = token
+        self.password = ""  # Clear password after successful auth
         return token
 
     async def get_all_systems(self) -> list[ServerMetrics]:
