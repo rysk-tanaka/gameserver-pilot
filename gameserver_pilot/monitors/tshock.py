@@ -1,5 +1,7 @@
 """TShock REST API player monitor for Terraria servers."""
 
+from http import HTTPStatus
+
 import httpx
 
 from gameserver_pilot.monitors.base import PlayerMonitor
@@ -40,6 +42,6 @@ class TShockMonitor(PlayerMonitor):
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(f"{self.base_url}/v2/server/status")
-                return response.status_code == 200
+                return response.status_code == HTTPStatus.OK
         except httpx.HTTPError:
             return False

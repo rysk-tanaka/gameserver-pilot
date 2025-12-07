@@ -1,7 +1,8 @@
 """Tests for the log file player monitor."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from gameserver_pilot.monitors.logfile import LogFileMonitor
 

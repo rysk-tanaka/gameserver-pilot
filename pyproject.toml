@@ -29,10 +29,12 @@ dev = [
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "UP", "B", "I", "PLR"]
+select = ["E", "W", "F", "UP", "B", "I", "C90", "PLR"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.pylint]
-max-complexity = 10
 max-args = 8
 max-branches = 15
 max-statements = 50

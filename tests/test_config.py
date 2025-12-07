@@ -2,12 +2,14 @@
 
 from gameserver_pilot.config import Settings
 
+DEFAULT_AUTO_STOP_MINUTES = 60
+
 
 def test_default_settings() -> None:
     """Test default configuration values."""
     settings = Settings()
     assert settings.env == "development"
-    assert settings.auto_stop_minutes == 60
+    assert settings.auto_stop_minutes == DEFAULT_AUTO_STOP_MINUTES
     assert settings.aws_default_region == "ap-northeast-1"
 
 
